@@ -29,7 +29,7 @@ const AuthModal = () => {
     country: "",
   });
 
-  
+
 
 
   // OTP state
@@ -53,6 +53,9 @@ const AuthModal = () => {
   };
 
   // ---------------- SIGNUP ----------------
+  // Submits signup details — backend automatically sends OTP to the email.
+  // The OTP field is shown inline in the signup form; after submission the
+  // user enters the OTP and calls handleOtpVerify to complete registration.
   const handleSignup = async (e) => {
     e.preventDefault();
     if (signupData.password !== signupData.confirmPassword) {
@@ -61,8 +64,7 @@ const AuthModal = () => {
 
     try {
       await api.post("/auth/signup", signupData);
-      setMode("otp");
-      alert("OTP sent to your email");
+      alert("OTP sent to " + signupData.email + ". Enter it below to verify your account.");
     } catch (err) {
       const message = err.response?.data?.message || "Signup failed";
       alert(message);
