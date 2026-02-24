@@ -29,7 +29,6 @@ interface LoginFormProps {
     // OTP handlers
     otp: string
     setOtp: (val: string) => void
-    handleOtpVerify: (e: React.FormEvent) => void
     handleSendOtp: (targetEmail: string) => void
     // Forgot Password handlers
     resetEmail: string
@@ -39,6 +38,9 @@ interface LoginFormProps {
     newPassword: string
     setNewPassword: (val: string) => void
     handleResetPassword: (e: React.FormEvent) => void
+    // Signup method
+    signupMethod?: string
+    setSignupMethod?: (method: string) => void
 }
 
 export default function LoginForm({
@@ -57,7 +59,6 @@ export default function LoginForm({
     handleSignup,
     otp,
     setOtp,
-    handleOtpVerify,
     handleSendOtp,
     resetEmail,
     setResetEmail,
@@ -65,6 +66,8 @@ export default function LoginForm({
     newPassword,
     setNewPassword,
     handleResetPassword,
+    signupMethod = "password",
+    setSignupMethod = () => { },
 }: LoginFormProps) {
     const [showPassword, setShowPassword] = useState(false)
     const [showSignupPassword, setShowSignupPassword] = useState(false)
@@ -118,7 +121,6 @@ export default function LoginForm({
                                             placeholder="email@example.com"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            required
                                             className="h-10 flex-1"
                                         />
                                         <Button
@@ -133,7 +135,7 @@ export default function LoginForm({
                                     </div>
                                 </div>
 
-                                {/* OTP input — always visible below email */}
+                                {/* OTP input */}
                                 <div className="space-y-1.5">
                                     <Label htmlFor="loginOtp">One-Time Password</Label>
                                     <Input
@@ -146,7 +148,7 @@ export default function LoginForm({
                                     />
                                 </div>
 
-                                {/* ── or ── divider */}
+                                {/* or divider */}
                                 <div className="relative my-1">
                                     <div className="absolute inset-0 flex items-center">
                                         <div className="w-full border-t border-gray-200" />
@@ -156,7 +158,7 @@ export default function LoginForm({
                                     </div>
                                 </div>
 
-                                {/* Email (for password login) */}
+                                {/* Password login section */}
                                 <div className="space-y-1.5">
                                     <Label htmlFor="loginEmailPwd">Email Address</Label>
                                     <Input
@@ -169,7 +171,6 @@ export default function LoginForm({
                                     />
                                 </div>
 
-                                {/* Password */}
                                 <div className="space-y-1.5">
                                     <Label htmlFor="loginPassword">Password</Label>
                                     <div className="relative">
@@ -179,7 +180,6 @@ export default function LoginForm({
                                             placeholder="Enter your password"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            required
                                             className="h-10 pr-10"
                                         />
                                         <button
@@ -254,15 +254,41 @@ export default function LoginForm({
                                     <p className="text-sm text-muted-foreground mt-1">Join us today</p>
                                 </div>
 
+                                {/* Method Selection */}
+                                <div className="flex gap-4 mb-4 justify-center">
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            name="signupMethod"
+                                            value="password"
+                                            checked={signupMethod === "password"}
+                                            onChange={(e) => setSignupMethod(e.target.value)}
+                                            className="h-4 w-4 text-primary"
+                                        />
+                                        <span className="text-sm">Use Password</span>
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            name="signupMethod"
+                                            value="otp"
+                                            checked={signupMethod === "otp"}
+                                            onChange={(e) => setSignupMethod(e.target.value)}
+                                            className="h-4 w-4 text-primary"
+                                        />
+                                        <span className="text-sm">Use OTP</span>
+                                    </label>
+                                </div>
+
                                 {/* Name */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
                                         <Label htmlFor="firstName">First Name</Label>
-                                        <Input id="firstName" placeholder="John" value={signupData.firstName} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="firstName" placeholder="John" value={signupData.firstName} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="lastName">Last Name</Label>
-                                        <Input id="lastName" placeholder="Doe" value={signupData.lastName} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="lastName" placeholder="Doe" value={signupData.lastName} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                 </div>
 
@@ -276,87 +302,90 @@ export default function LoginForm({
                                             placeholder="email@example.com"
                                             value={signupData.email}
                                             onChange={handleSignupChange}
-                                            required
                                             className="h-9 flex-1"
+                                            required
                                         />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="h-9 px-3 text-sm shrink-0"
-                                            onClick={() => handleSendOtp(signupData.email)}
-                                            disabled={!signupData.email}
-                                        >
-                                            Send OTP
-                                        </Button>
+                                        {signupMethod === "otp" && (
+                                            <button
+                                                type="button"
+                                                className="h-9 px-3 text-sm shrink-0 border rounded-md hover:bg-gray-50 flex items-center justify-center transition-colors"
+                                                onClick={() => handleSendOtp(signupData.email)}
+                                                disabled={!signupData.email}
+                                            >
+                                                Send OTP
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* OTP — immediately below email */}
-                                <Input
-                                    id="signupOtp"
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    maxLength={6}
-                                    placeholder="Enter OTP sent to your email"
-                                    autoComplete="new-password"
-                                    autoCorrect="off"
-                                    autoCapitalize="off"
-                                    spellCheck={false}
-                                    className="h-9 text-center tracking-widest font-mono text-lg"
-                                />
+                                {/* OTP - only show if OTP method is selected */}
+                                {signupMethod === "otp" && (
+                                    <Input
+                                        id="signupOtp"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value)}
+                                        maxLength={6}
+                                        placeholder="Enter OTP sent to your email"
+                                        autoComplete="off"
+                                        className="h-9 text-center tracking-widest font-mono text-lg"
+                                        required={signupMethod === "otp"}
+                                    />
+                                )}
 
-                                {/* Passwords */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="password">Password</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="password"
-                                                type={showSignupPassword ? "text" : "password"}
-                                                placeholder="••••••••"
-                                                value={signupData.password}
-                                                onChange={handleSignupChange}
-                                                required
-                                                className="h-9 pr-9"
-                                            />
-                                            <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                                {showSignupPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                                            </button>
+                                {/* Passwords - only show if password method is selected */}
+                                {signupMethod === "password" && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="password">Password</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="password"
+                                                    type={showSignupPassword ? "text" : "password"}
+                                                    placeholder="••••••••"
+                                                    value={signupData.password}
+                                                    onChange={handleSignupChange}
+                                                    className="h-9 pr-9"
+                                                    required={signupMethod === "password"}
+                                                />
+                                                <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                    {showSignupPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="confirmPassword">Confirm</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="confirmPassword"
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    placeholder="••••••••"
+                                                    value={signupData.confirmPassword}
+                                                    onChange={handleSignupChange}
+                                                    className="h-9 pr-9"
+                                                    required={signupMethod === "password"}
+                                                />
+                                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="confirmPassword">Confirm</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="confirmPassword"
-                                                type={showConfirmPassword ? "text" : "password"}
-                                                placeholder="••••••••"
-                                                value={signupData.confirmPassword}
-                                                onChange={handleSignupChange}
-                                                required
-                                                className="h-9 pr-9"
-                                            />
-                                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                                {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
 
                                 {/* Phone */}
                                 <div className="space-y-1.5">
                                     <Label htmlFor="phone">Phone Number</Label>
-                                    <Input id="phone" type="tel" placeholder="+91 98765 43210" value={signupData.phone} onChange={handleSignupChange} required className="h-9" />
+                                    <Input id="phone" type="tel" placeholder="+91 98765 43210" value={signupData.phone} onChange={handleSignupChange} className="h-9" required />
                                 </div>
 
                                 {/* Address */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
                                         <Label htmlFor="line1">Address Line 1</Label>
-                                        <Input id="line1" placeholder="123 Main St" value={signupData.line1} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="line1" placeholder="123 Main St" value={signupData.line1} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="line2">Address Line 2</Label>
@@ -367,27 +396,27 @@ export default function LoginForm({
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
                                         <Label htmlFor="city">City</Label>
-                                        <Input id="city" placeholder="Mumbai" value={signupData.city} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="city" placeholder="Mumbai" value={signupData.city} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="state">State</Label>
-                                        <Input id="state" placeholder="Maharashtra" value={signupData.state} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="state" placeholder="Maharashtra" value={signupData.state} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
                                         <Label htmlFor="postalCode">Postal Code</Label>
-                                        <Input id="postalCode" placeholder="400001" value={signupData.postalCode} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="postalCode" placeholder="400001" value={signupData.postalCode} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                     <div className="space-y-1.5">
                                         <Label htmlFor="country">Country</Label>
-                                        <Input id="country" placeholder="India" value={signupData.country} onChange={handleSignupChange} required className="h-9" />
+                                        <Input id="country" placeholder="India" value={signupData.country} onChange={handleSignupChange} className="h-9" required />
                                     </div>
                                 </div>
 
                                 <Button type="submit" className="w-full h-10 font-semibold mt-1">
-                                    Create Account
+                                    {signupMethod === "password" ? "Create Account with Password" : "Create Account with OTP"}
                                 </Button>
 
                                 <p className="text-center text-sm text-muted-foreground">
@@ -399,27 +428,6 @@ export default function LoginForm({
                             </form>
                         </TabsContent>
                     </Tabs>
-                )}
-
-                {/* ── OTP VERIFICATION (standalone mode) ── */}
-                {mode === "otp" && (
-                    <form onSubmit={handleOtpVerify} className="space-y-5">
-                        <div className="text-center mb-4">
-                            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                                <svg className="h-7 w-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                            <h2 className="text-2xl font-bold tracking-tight">Verify Email</h2>
-                            <p className="text-sm text-muted-foreground mt-1">Enter the OTP sent to your email</p>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="otp">One-Time Password</Label>
-                            <Input id="otp" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="• • • • • •" className="text-center text-2xl tracking-[0.5em] h-12 font-mono" maxLength={6} required />
-                        </div>
-                        <Button type="submit" className="w-full h-10 font-semibold">Verify &amp; Continue</Button>
-                        <button type="button" onClick={() => setMode("login")} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors">← Back to Login</button>
-                    </form>
                 )}
 
                 {/* ── FORGOT PASSWORD ── */}

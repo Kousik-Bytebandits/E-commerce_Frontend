@@ -4,10 +4,11 @@ import LoginForm from "./login/login-form";
 import api from "../api/axios";
 
 const AuthModal = () => {
-  const { showModal, setShowModal, login } = useAuth();
+  const { showModal, setShowModal, login, setUser } = useAuth();
 
   const [mode, setMode] = useState("login");
   const [remember, setRemember] = useState(false);
+  const [signupMethod, setSignupMethod] = useState("password"); // "password" or "otp"
 
   // Login state
   const [email, setEmail] = useState("");
@@ -29,9 +30,6 @@ const AuthModal = () => {
     country: "",
   });
 
-
-
-
   // OTP state
   const [otp, setOtp] = useState("");
 
@@ -44,46 +42,154 @@ const AuthModal = () => {
   // ---------------- LOGIN ----------------
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    if (!email.trim()) {
+      return alert("Please enter your email address.");
+    }
+
     try {
-      await login(email, password, remember);
-      setShowModal(false);
+      if (otp.trim()) {
+        // OTP-based login
+        const res = await api.post("/auth/login/verify-otp", {
+          email,
+          otp,
+          remember,
+        });
+        const { accessToken, refreshToken } = res.data;
+        if (remember) {
+          localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("refreshToken", refreshToken);
+        } else {
+          sessionStorage.setItem("accessToken", accessToken);
+          sessionStorage.setItem("refreshToken", refreshToken);
+        }
+        const me = await api.get("/auth/me");
+        setUser(me.data);
+        setShowModal(false);
+      } else {
+        if (!password.trim()) {
+          return alert("Please enter your password or use OTP login.");
+        }
+        // Password login
+        await login(email, password, remember);
+        setShowModal(false);
+      }
     } catch (err) {
-      alert("Login failed");
+      console.error("Login Error:", err);
+      const msg = err.response?.data?.message || err.message || "Login failed";
+      alert(msg);
     }
   };
 
-  // ---------------- SIGNUP ----------------
-  // Submits signup details — backend automatically sends OTP to the email.
-  // The OTP field is shown inline in the signup form; after submission the
-  // user enters the OTP and calls handleOtpVerify to complete registration.
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    if (signupData.password !== signupData.confirmPassword) {
+  // ---------------- SIGNUP WITH PASSWORD ----------------
+  const handlePasswordSignup = async () => {
+    const { firstName, lastName, password, confirmPassword, phone, line1, city, state, postalCode, country, email } = signupData;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password || !confirmPassword || !phone || !line1 || !city || !state || !postalCode || !country) {
+      return alert("Please fill in all required fields");
+    }
+
+    if (password !== confirmPassword) {
       return alert("Passwords do not match");
     }
 
     try {
       await api.post("/auth/signup", signupData);
-      alert("OTP sent to " + signupData.email + ". Enter it below to verify your account.");
+      alert("Account created successfully! You can now log in.");
+      setMode("login");
+      // Clear form
+      setSignupData({
+        firstName: "", lastName: "", email: "", password: "", confirmPassword: "",
+        phone: "", line1: "", line2: "", city: "", state: "", postalCode: "", country: ""
+      });
     } catch (err) {
-      const message = err.response?.data?.message || "Signup failed";
-      alert(message);
+      alert(err.response?.data?.message || "Signup failed. Please try again.");
     }
   };
 
-  // ---------------- VERIFY OTP ----------------
-  const handleOtpVerify = async (e) => {
-    e.preventDefault();
+  // ---------------- SIGNUP WITH OTP ----------------
+  const handleOtpSignup = async () => {
+    const { firstName, lastName, email, phone, line1, line2, city, state, postalCode, country } = signupData;
+
+    // Validate required fields (password not required for OTP signup)
+    if (!firstName || !lastName || !email || !phone || !line1 || !city || !state || !postalCode || !country) {
+      return alert("Please fill in all required fields");
+    }
+
     try {
-      await api.post("/auth/verify-email", {
-        email: signupData.email,
+      // First, send OTP if not already sent
+      if (!otp) {
+        await api.post("/auth/login/send-otp", { email });
+        alert(`OTP sent to ${email}`);
+        return;
+      }
+
+      // Verify OTP and create account
+      const res = await api.post("/auth/login/verify-otp", {
+        email,
         otp,
+        remember,
       });
 
-      alert("Account verified. Please login.");
-      setMode("login");
+      // Account is created/verified, now complete the profile
+      const { accessToken, refreshToken } = res.data;
+      if (remember) {
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+      } else {
+        sessionStorage.setItem("accessToken", accessToken);
+        sessionStorage.setItem("refreshToken", refreshToken);
+      }
+
+      // Update user profile with additional details
+      await api.put("/auth/profile", {
+        firstName,
+        lastName,
+        phone,
+        address: { line1, line2, city, state, postalCode, country }
+      });
+
+      const me = await api.get("/auth/me");
+      setUser(me.data);
+      setShowModal(false);
+      setOtp("");
     } catch (err) {
-      alert("Invalid or expired OTP");
+      console.error("OTP Signup Error:", err);
+      const msg = err.response?.data?.message || err.message || "OTP verification failed";
+      alert(msg);
+    }
+  };
+
+  // ---------------- MAIN SIGNUP HANDLER ----------------
+  const handleSignup = async (e) => {
+    e?.preventDefault();
+
+    if (signupMethod === "password") {
+      await handlePasswordSignup();
+    } else {
+      await handleOtpSignup();
+    }
+  };
+
+  // ---------------- SEND OTP ----------------
+  const handleSendOtp = async (targetEmail) => {
+    if (!targetEmail) return alert("Please enter your email address first.");
+
+    try {
+      if (mode === "signup") {
+        // For signup, just send OTP
+        await api.post("/auth/login/send-otp", { email: targetEmail });
+        alert(`OTP sent to ${targetEmail}`);
+        setSignupMethod("otp");
+      } else {
+        // For login
+        await api.post("/auth/login/send-otp", { email: targetEmail });
+        alert(`Login OTP sent to ${targetEmail}`);
+      }
+      setOtp("");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to send OTP");
     }
   };
 
@@ -92,10 +198,11 @@ const AuthModal = () => {
     e.preventDefault();
     try {
       await api.post("/auth/forgot-password", { email: resetEmail });
+      alert("OTP sent to your email");
+      setOtp("");
       setMode("reset");
-      alert("OTP sent to email");
     } catch (err) {
-      alert("Enter correct email address");
+      alert(err.response?.data?.message || "Enter a valid email address");
     }
   };
 
@@ -108,11 +215,12 @@ const AuthModal = () => {
         otp,
         newPassword,
       });
-
-      alert("Password updated successfully");
+      alert("Password updated successfully. Please sign in.");
+      setOtp("");
+      setNewPassword("");
       setMode("login");
     } catch (err) {
-      alert("Invalid OTP or reset failed");
+      alert(err.response?.data?.message || "Invalid OTP or reset failed");
     }
   };
 
@@ -135,13 +243,15 @@ const AuthModal = () => {
           handleSignup={handleSignup}
           otp={otp}
           setOtp={setOtp}
-          handleOtpVerify={handleOtpVerify}
+          handleSendOtp={handleSendOtp}
           resetEmail={resetEmail}
           setResetEmail={setResetEmail}
           handleForgotPassword={handleForgotPassword}
           newPassword={newPassword}
           setNewPassword={setNewPassword}
           handleResetPassword={handleResetPassword}
+          signupMethod={signupMethod}
+          setSignupMethod={setSignupMethod}
         />
       </div>
     </div>
